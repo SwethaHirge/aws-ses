@@ -10,8 +10,8 @@ app.use(bodyParser.urlencoded({ extended: false }))
 app.use(bodyParser.json())
 
 const ses = new AWS.SES({
-    accessKeyId: 'AKIA37XTPCYIQIMVEG2H',
-    secretAccessKey: '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',
+    accessKeyId: '',
+    secretAccessKey: '',
     region: 'us-east-1'
 });
 
