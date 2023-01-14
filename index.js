@@ -1,54 +1,86 @@
 const express = require('express');
 const app = express();
-const AWS = require('aws-sdk');
 const bodyParser = require('body-parser');
-
+const {
+  sendEmails,
+  createTemplates,
+  getTemplateByName,
+  sendEmailWithTemplate,
+  updateTemplates,
+  getList
+} = require('./service/aws-ses')
 // parse application/x-www-form-urlencoded
 app.use(bodyParser.urlencoded({ extended: false }))
 
 // parse application/json
 app.use(bodyParser.json())
 
-const ses = new AWS.SES({
-    accessKeyId: '',
-    secretAccessKey: '',
-    region: 'us-east-1'
-});
 
-app.post('/send-email', (req, res) => {
-  // basic validation for request body
-  if(!req.body.to || !req.body.from || !req.body.subject || !req.body.body) {
-    return res.status(400).json({ error: 'to, from, subject, and body fields are required' });
+app.post('/send-email', async (req, res) => {
+  try {
+    const { from, to, subject, textMessage } = req.body;
+    const response = await sendEmails(from, to, subject, textMessage);
+    console.log();
+    res.json({ response });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
-
-    const params = {
-        Destination: {
-            ToAddresses: [req.body.to]
-        },
-        Message: {
-            Body: {
-                Text: {
-                    Charset: 'UTF-8',
-                    Data: req.body.body
-                }
-            },
-            Subject: {
-                Charset: 'UTF-8',
-                Data: req.body.subject
-            }
-        },
-        Source: req.body.from
-    };
-
-    ses.sendEmail(params, (err, data) => {
-        if (err) {
-            res.status(500).json({ error: err.message });
-        } else {
-            res.json({ message: 'Email sent successfully.' });
-        }
-    });
 });
+
+
+app.post('/create-Templates', async (req, res) => {
+  try {
+
+    const { templateName, subjectPart, htmlPart, textPart } = req.body;
+    const message = await createTemplates(templateName, subjectPart, htmlPart, textPart);
+    res.json({ message });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+})
+
+app.get('/template/:name', async (req, res) => {
+  try {
+    const templateName = req.params.name;
+    const template = await getTemplateByName(templateName);
+    res.json(template);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/send-EmailWithTemplate', async (req, res) => {
+  try {
+    const { templateName, to, from, templateData } = req.body;
+    const message = await sendEmailWithTemplate(templateName, to, from, templateData);
+    res.json({ message });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+})
+
+app.put('/update-Templates', async (req, res) => {
+  try {
+    const { TemplateName, SubjectPart, HtmlPart, TextPart } = req.body;
+    const message = await updateTemplates(TemplateName, SubjectPart, HtmlPart, TextPart);
+    res.json({ message });
+  } catch (err) {
+    res.json({ error: err });
+  }
+})
+
+
+app.get('/getList', async (req, res) => {
+  try {
+    const response = await getList();
+    return res.send(response);
+  } catch (err) {
+    res.json({ error: err });
+  }
+});
+
+
 
 app.listen(3000, () => {
-    console.log('Server started on port 3000');
+  console.log('Server started on port 3000');
 });
